@@ -1,11 +1,12 @@
 /**
- * ラベル発行画面からの商品追加申請を保存する関数（申請者なし）
+ * ラベル発行画面からの商品追加申請を保存する関数（食品トレース側を参照）
  */
 function requestProductAddition(data) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const traceSpreadsheetId = "1aBT8g4vPYv2jTNE9qS-mTGVZl3wkmc186yIn7EAg5gY";
+  const ss = SpreadsheetApp.openById(traceSpreadsheetId);
   let sheet = ss.getSheetByName("商品追加申請");
   
-  // 「商品追加申請」シートがなければ自動作成する
+  // 「商品追加申請」シートがなければトレース側に自動作成する
   if (!sheet) {
     sheet = ss.insertSheet("商品追加申請");
     sheet.getRange(1, 1, 1, 4).setValues([["申請日時", "レコード番号", "商品名", "状態"]]);
@@ -22,7 +23,7 @@ function requestProductAddition(data) {
 
   const nowStr = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyy/MM/dd HH:mm:ss");
   
-  // 申請シートへ追記（申請者カラムなし：日時、レコード番号、商品名、状態）
+  // トレース側の申請シートへ追記
   sheet.appendRow([nowStr, recordNo, productName, "未承認"]);
   SpreadsheetApp.flush();
 
@@ -30,7 +31,8 @@ function requestProductAddition(data) {
 }
 
 function getPendingProductRequests() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const traceSpreadsheetId = "1aBT8g4vPYv2jTNE9qS-mTGVZl3wkmc186yIn7EAg5gY";
+  const ss = SpreadsheetApp.openById(traceSpreadsheetId);
   const sheet = ss.getSheetByName("商品追加申請");
   if (!sheet || sheet.getLastRow() < 2) return [];
 
@@ -40,7 +42,6 @@ function getPendingProductRequests() {
   for (let i = 1; i < data.length; i++) {
     const status = String(data[i][3] || "").trim();
     if (status === "未承認") {
-      // 日付データを確実に「YYYY/MM/DD HH:mm:ss」の文字列に変換
       let dateVal = data[i][0];
       if (dateVal instanceof Date) {
         dateVal = Utilities.formatDate(dateVal, "Asia/Tokyo", "yyyy/MM/dd HH:mm:ss");
@@ -58,10 +59,11 @@ function getPendingProductRequests() {
 }
 
 /**
- * 申請を承認し、「商品リスト」へ自動追加する（最終行の直下に追加する改善版）
+ * 申請を承認し、食品トレース側の「商品リスト」へ自動追加する
  */
 function approveProductRequest(rowIndex, recordNo, productName) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const traceSpreadsheetId = "1aBT8g4vPYv2jTNE9qS-mTGVZl3wkmc186yIn7EAg5gY";
+  const ss = SpreadsheetApp.openById(traceSpreadsheetId);
   const reqSheet = ss.getSheetByName("商品追加申請");
   const listSheet = ss.getSheetByName("商品リスト");
 
@@ -70,22 +72,20 @@ function approveProductRequest(rowIndex, recordNo, productName) {
   }
 
   try {
-    // 1. 「商品追加申請」シートの状態を「承認済」に更新
+    // 1. トレース側の「商品追加申請」シートの状態を「承認済」に更新
     reqSheet.getRange(Number(rowIndex), 4).setValue("承認済");
 
-    // 2. 「商品リスト」の実際のデータ最終行を安全に取得してその次に追加
-    // ※保護の影響で下方に空行がある場合でも、データが入っている最後の行を正しく探します
+    // 2. トレース側の「商品リスト」のデータ最終行を安全に取得してその次に追加
     const listData = listSheet.getDataRange().getValues();
     let lastDataRow = 1;
     for (let r = listData.length - 1; r >= 0; r--) {
-      // A列またはB列にデータが入っている最初の行を探索
       if (String(listData[r][0]).trim() !== "" || String(listData[r][1]).trim() !== "") {
         lastDataRow = r + 1;
         break;
       }
     }
 
-    // データのすぐ次の行に書き込み
+    // トレース側の「商品リスト」のすぐ次の行に書き込み
     listSheet.getRange(lastDataRow + 1, 1, 1, 2).setValues([[recordNo, productName]]);
 
     SpreadsheetApp.flush();
