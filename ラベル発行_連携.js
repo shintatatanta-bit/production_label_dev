@@ -20,7 +20,7 @@ function getProductMasterList() {
       if (rec && name) {
         productMap[rec] = {
           recordNo: rec,
-          name: name,
+          productName: name,
           defaultExpiry: ""
         };
       }
