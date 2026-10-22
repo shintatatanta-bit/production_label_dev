@@ -1,0 +1,1569 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A-one 62295 ラベルシール発行システム</title>
+  <style>
+    * { box-sizing: border-box; }
+    
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+
+    body {
+      font-family: "Hiragino Kaku Gothic ProN", "Meiryo", "MS Gothic", sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #4a4d50;
+      color: #333;
+    }
+
+    /* 操作コントロールパネル */
+    .control-panel {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: #ffffff;
+      border-bottom: 2.5px solid #1a73e8;
+      padding: 10px 16px;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.18);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    /* 各商品の入力行カード */
+    .item-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      background: #f8f9fa;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid #dadce0;
+      transition: background 0.15s;
+    }
+    .item-row:hover {
+      background: #f1f3f4;
+    }
+
+    .row-index-badge {
+      background: #1a73e8;
+      color: white;
+      font-size: 11px;
+      font-weight: bold;
+      padding: 3px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    .input-search-code {
+      width: 70px;
+      padding: 4px;
+      border: 1.5px solid #1a73e8;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+      text-align: center;
+      background: #e8f0fe;
+    }
+
+    .select-item {
+      font-size: 12px;
+      padding: 4px 6px;
+      border: 1.5px solid #1a73e8;
+      border-radius: 4px;
+      min-width: 240px;
+      max-width: 360px;
+      font-weight: bold;
+      background: #fff;
+    }
+
+    .input-expiry-date {
+      width: 125px;
+      padding: 3px 5px;
+      border: 1.5px solid #1a73e8;
+      border-radius: 4px;
+      font-size: 11.5px;
+      font-weight: bold;
+      background: #fff;
+      cursor: pointer;
+    }
+    .input-expiry-date:disabled {
+      background: #f1f3f4 !important;
+      border: 1px dashed #9aa0a6 !important;
+      color: transparent !important;
+      cursor: not-allowed;
+    }
+
+    .blank-toggle-label {
+      font-size: 11px;
+      cursor: pointer;
+      font-weight: bold;
+      padding: 3px 6px;
+      border-radius: 4px;
+      user-select: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      border: 1.5px solid #dadce0;
+      background: #fff;
+      color: #555;
+    }
+    .blank-toggle-label.active {
+      background: #e8f0fe;
+      color: #1a73e8;
+      border-color: #1a73e8;
+    }
+
+    /* ポップアップを開く枚数ボタン風ボックス（通常時） */
+    .input-num-trigger {
+      padding: 4px 8px;
+      border: 1.8px solid #1a73e8;
+      border-radius: 5px;
+      font-size: 13px;
+      font-weight: bold;
+      text-align: center;
+      background: #fffde7;
+      color: #b05a00;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      user-select: none;
+      transition: all 0.15s;
+      min-width: 60px;
+    }
+    .input-num-trigger:hover {
+      background: #fff9c4;
+      border-color: #1557b0;
+      transform: translateY(-1px);
+    }
+
+    /* 0枚のときの目立つ点滅・警告スタイル */
+    .input-num-trigger.is-zero-warning {
+      background: #fce8e6 !important;
+      border: 2px solid #d93025 !important;
+      color: #c5221f !important;
+      animation: pulseAttention 1.2s infinite alternate;
+      font-weight: 900;
+      cursor: pointer;
+    }
+    @keyframes pulseAttention {
+      0% {
+        box-shadow: 0 0 0 0 rgba(217, 48, 37, 0.5);
+        transform: scale(1);
+      }
+      100% {
+        box-shadow: 0 0 10px 3px rgba(217, 48, 37, 0.45);
+        transform: scale(1.04);
+      }
+    }
+
+    /* 一発で全面（残り全枠）にするボタン */
+    .btn-fill-all {
+      background: #e37400;
+      color: white;
+      font-size: 11px;
+      font-weight: bold;
+      border: none;
+      border-radius: 4px;
+      padding: 5px 8px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+    }
+    .btn-fill-all:hover {
+      background: #b05a00;
+      transform: translateY(-1px);
+    }
+
+    .btn-row-del {
+      color: #d93025;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 13px;
+      line-height: 1;
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid #fce8e6;
+      background: #fff;
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+    }
+    .btn-row-del:hover {
+      background: #fce8e6;
+      border-color: #d93025;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .btn {
+      padding: 7px 14px;
+      font-size: 12px;
+      font-weight: bold;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s;
+      text-decoration: none;
+    }
+    .btn-add-line { background: #e37400; color: white; }
+    .btn-add-line:hover { background: #b05a00; }
+    .btn-spec { background: #455a64; color: white; }
+    .btn-spec:hover { background: #37474f; }
+    .btn-manual { background: #5f6368; color: white; }
+    .btn-manual:hover { background: #494c50; }
+    .btn-print { background: #1a73e8; color: white; }
+    .btn-print:hover { background: #1557b0; }
+
+    .status-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-top: 1px dotted #dadce0;
+      padding-top: 6px;
+    }
+
+    .zoom-controls {
+      display: inline-flex;
+      align-items: center;
+      background: #f1f3f4;
+      padding: 2px 4px;
+      border-radius: 6px;
+      border: 1px solid #dadce0;
+      gap: 4px;
+    }
+    .btn-zoom {
+      background: #ffffff;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 3px 7px;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      color: #333;
+    }
+    .btn-zoom:hover { background: #e8eaed; }
+    .zoom-val-text {
+      font-size: 11px;
+      font-weight: bold;
+      color: #1a73e8;
+      min-width: 40px;
+      text-align: center;
+    }
+
+    .preview-outer {
+      width: 100%;
+      overflow: auto;
+      display: flex;
+      justify-content: center;
+      padding: 16px 0 60px 0;
+    }
+
+    .preview-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transform-origin: top center;
+      transition: transform 0.15s ease-out;
+    }
+
+    /* A4シート実寸（95面シート：公式フォーマット F95A4-1 準拠） */
+    .sheet-a4 {
+      width: 210mm;
+      height: 297mm;
+      background: white;
+      padding-top: 16.5mm;
+      padding-bottom: 16.5mm;
+      padding-left: 13.5mm;
+      padding-right: 13.5mm;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      page-break-after: avoid !important;
+      overflow: visible;
+      position: relative;
+    }
+
+    .screen-grid-guide {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .guide-col-header {
+      position: absolute;
+      top: 2.5mm;
+      left: 13.5mm;
+      display: grid;
+      grid-template-columns: repeat(5, 35.0mm);
+      column-gap: 2.0mm;
+      width: 183.0mm;
+      text-align: center;
+      font-size: 9.5px;
+      font-weight: 900;
+      color: #1a73e8;
+      letter-spacing: 0.5px;
+    }
+    .guide-col-cell {
+      background: #e8f0fe;
+      border: 1px solid #c2e7ff;
+      border-radius: 3px;
+      padding: 1px 0;
+    }
+
+    .guide-row-header {
+      position: absolute;
+      top: 16.5mm;
+      left: 2.0mm;
+      display: grid;
+      grid-template-rows: repeat(19, 12.0mm);
+      row-gap: 2.0mm;
+      height: 264.0mm;
+      width: 9.5mm;
+      text-align: center;
+      font-size: 8.5px;
+      font-weight: 900;
+      color: #1a73e8;
+    }
+    .guide-row-cell {
+      background: #e8f0fe;
+      border: 1px solid #c2e7ff;
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .label-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 35.0mm);
+      grid-template-rows: repeat(19, 12.0mm);
+      column-gap: 2.0mm;
+      row-gap: 2.0mm;
+      width: 183.0mm;
+      height: 264.0mm;
+    }
+
+    .label-cell {
+      width: 35.0mm;
+      height: 12.0mm;
+      border-radius: 1.2mm;
+      border: 0.5px solid rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      cursor: pointer;
+      position: relative;
+      background: #ffea3b;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    .label-cell.empty-cell {
+      background: #ffffff !important;
+      border: 0.5px dashed #bbb !important;
+    }
+    .label-cell.empty-cell:hover {
+      background: #fffde7 !important;
+      border-color: #fbc02d !important;
+    }
+
+    .label-cell.is-start-slot {
+      outline: 2px solid #d93025 !important;
+      box-shadow: 0 0 6px rgba(217, 48, 37, 0.6);
+      z-index: 5;
+    }
+
+    .cell-row-top {
+      height: 4.2mm;
+      padding: 1.1mm 1.0mm 0.1mm 1.0mm;
+      border-bottom: 0.6px solid #111;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .cell-product-name {
+      font-size: 6.8pt;
+      font-weight: 900;
+      color: #000;
+      white-space: nowrap;
+      line-height: 1.0;
+      letter-spacing: -0.2px;
+      display: inline-block;
+      transform-origin: left center;
+    }
+
+    .cell-row-body {
+      flex: 1;
+      height: 7.8mm;
+      padding: 0.4mm 1.0mm 0.8mm 1.0mm;
+      display: flex;
+      position: relative;
+    }
+
+    /* 左側カラム：上段にコード枠、下段に賞味期限ラベル */
+    .cell-left-col {
+      width: 9.8mm;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 2;
+    }
+
+    /* 上段になったレコード番号の四角い枠 */
+    .cell-code-box {
+      width: 9.8mm;
+      height: 3.1mm;
+      border: 0.8px solid #000;
+      padding: 0 0.2mm;
+      border-radius: 0.5px;
+      background: #ffea3b;
+      line-height: 1.0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      margin-top: 0.2mm;
+    }
+
+    .cell-code-number {
+      font-size: 6.1pt;
+      font-weight: 900;
+      color: #000;
+      font-family: "Arial Black", "Arial", sans-serif;
+      letter-spacing: -0.1px;
+      line-height: 1.0;
+      white-space: nowrap;
+      display: inline-block;
+      transform-origin: center center;
+    }
+
+    /* 下段になった「賞味期限」の文字ラベル */
+    .cell-stamp-label {
+      font-size: 5.1pt;
+      color: #000;
+      font-weight: 800;
+      line-height: 1.0;
+      letter-spacing: 0.05px;
+      white-space: nowrap;
+      margin-bottom: 0.3mm;
+      text-align: center;
+      width: 100%;
+    }
+
+    /* 右側：賞味期限の日付値オーバーレイ */
+    .cell-stamp-value-overlay {
+      position: absolute;
+      left: 10.8mm;
+      right: 0.8mm;
+      top: 0.2mm;
+      bottom: 0.4mm;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8.3pt;
+      font-weight: 900;
+      color: #000;
+      letter-spacing: 0.6px;
+      font-family: "Arial", "Courier New", monospace;
+    }
+
+    /* モーダル */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.45);
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(2px);
+    }
+    .modal-content {
+      background: #ffffff;
+      border-radius: 10px;
+      width: 320px;
+      padding: 16px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 8px;
+    }
+    .modal-title {
+      font-size: 13.5px;
+      font-weight: bold;
+      color: #1a73e8;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 260px;
+    }
+    .modal-close-btn {
+      cursor: pointer;
+      font-size: 18px;
+      color: #666;
+      border: none;
+      background: none;
+      font-weight: bold;
+    }
+    .modal-display-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: #f8f9fa;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1.5px solid #1a73e8;
+    }
+    .modal-num-input {
+      font-size: 26px;
+      font-weight: 900;
+      text-align: center;
+      width: 100px;
+      border: none;
+      background: transparent;
+      color: #b05a00;
+      outline: none;
+    }
+    .quick-btn-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+    .btn-quick-val {
+      padding: 7px 0;
+      font-size: 12px;
+      font-weight: bold;
+      border: 1px solid #dadce0;
+      background: #f1f3f4;
+      border-radius: 4px;
+      cursor: pointer;
+      color: #333;
+    }
+    .btn-quick-val:hover { background: #e8eaed; }
+    
+    .keypad-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+    .btn-keypad {
+      padding: 9px 0;
+      font-size: 15px;
+      font-weight: bold;
+      border: 1px solid #dadce0;
+      background: #ffffff;
+      border-radius: 5px;
+      cursor: pointer;
+      color: #202124;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .btn-keypad:active { background: #e8f0fe; }
+    .btn-keypad.clear { color: #d93025; background: #fce8e6; border-color: #fad2cf; }
+    .modal-action-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .btn-modal-submit {
+      flex: 1;
+      padding: 9px;
+      background: #1a73e8;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .btn-modal-submit:hover { background: #1557b0; }
+
+    .manual-modal-content {
+      background: #ffffff;
+      border-radius: 8px;
+      width: 680px;
+      max-width: 95vw;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 24px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+    }
+    .manual-step-box {
+      background: #f8f9fa;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-bottom: 10px;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .manual-step-title {
+      font-weight: bold;
+      color: #1a73e8;
+      margin-bottom: 3px;
+      font-size: 12.5px;
+    }
+    .manual-print-tip {
+      background: #e8f0fe;
+      border: 1.5px solid #1a73e8;
+      border-radius: 6px;
+      padding: 12px 14px;
+      margin-top: 12px;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .spec-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-bottom: 12px;
+    }
+    .spec-table th, .spec-table td {
+      border: 1px solid #dadce0;
+      padding: 7px 10px;
+    }
+    .spec-table th {
+      background: #f1f3f4;
+      font-weight: bold;
+      width: 38%;
+      color: #333;
+    }
+    .spec-table td {
+      font-weight: bold;
+      color: #111;
+    }
+
+    @media print {
+      .screen-grid-guide { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- コントロールバー -->
+  <div class="control-panel" id="topControlPanel">
+    <div id="itemsContainer" style="display:flex; flex-direction:column; gap:6px;"></div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <button type="button" class="btn btn-add-line" id="btnAddLine" onclick="addNewItemRow()">＋ 商品を追加</button>
+        <span style="font-size:12px; font-weight:bold;" id="lblTotalUsage">合計: 0 / 95枚 (残り 95枚)</span>
+      </div>
+
+      <div class="btn-group">
+        <button type="button" class="btn" style="background: #34a853; color: white; font-size: 12px;" onclick="openApprovalModal()">
+  📥 商品追加申請の確認
+</button>
+        <button type="button" class="btn btn-spec" onclick="openSpecModal()">📐 シート仕様・寸法確認</button>
+        <button type="button" class="btn btn-manual" onclick="openManualModal()">❓ 使い方マニュアル</button>
+        <button type="button" class="btn btn-print" onclick="openPrintWindow()">🖨️ 直接印刷 / PDF保存</button>
+      </div>
+    </div>
+
+    <div class="status-bar">
+      <div style="display:flex; align-items:center; gap:16px;">
+        <div class="form-group">
+          <span class="form-label" style="font-size:11.5px; font-weight:bold;">流し込み:</span>
+          <label style="font-size:11.5px; cursor:pointer;">
+            <input type="radio" name="flowDir" value="HORIZONTAL" onchange="updatePreview()"> ➔ 横送り
+          </label>
+          <label style="font-size:11.5px; cursor:pointer; margin-left:6px;">
+            <input type="radio" name="flowDir" value="VERTICAL" checked onchange="updatePreview()"> ⬇ 縦送り
+          </label>
+        </div>
+
+        <div class="form-group">
+          <span class="form-label" style="font-size:11.5px; font-weight:bold;">開始位置:</span>
+          <span style="font-size:12px; font-weight:bold; color:#d93025;" id="lblStartPos">1 番目 (先頭)</span>
+        </div>
+
+        <div class="zoom-controls">
+          <button type="button" class="btn-zoom" onclick="changeZoom(-0.1)" title="縮小">🔍－</button>
+          <span class="zoom-val-text" id="lblZoomVal">100%</span>
+          <button type="button" class="btn-zoom" onclick="changeZoom(0.1)" title="拡大">🔍＋</button>
+          <button type="button" class="btn-zoom" onclick="setZoom(1.0)">100%</button>
+          <button type="button" class="btn-zoom" onclick="fitPage()">📄 1枚全体</button>
+          <button type="button" class="btn-zoom" onclick="fitWidth()">↔ 幅全体</button>
+        </div>
+      </div>
+
+      <div style="font-size:11px; color:#555;">
+        💡 <b>使いかけシート:</b> 下のプレビューで空き枠をクリックすると開始位置を変えられます
+      </div>
+    </div>
+  </div>
+
+  <!-- プレビュー外枠 -->
+  <div class="preview-outer">
+    <div class="preview-container" id="sheetsContainer">
+      <div style="padding:40px; color:#fff;">マスターデータを読み込んでいます...</div>
+    </div>
+  </div>
+
+  <!-- 枚数入力ポップアップモーダル -->
+  <div class="modal-overlay" id="qtyModal" onclick="onModalBgClick(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <span class="modal-title" id="modalItemTitle">枚数を指定</span>
+        <button type="button" class="modal-close-btn" onclick="closeQtyModal()">✕</button>
+      </div>
+
+      <div class="modal-display-wrap">
+        <input type="text" id="modalInputVal" class="modal-num-input" maxlength="2"
+               oninput="onModalInputDirect(this.value)" onkeydown="if(event.key==='Enter') applyQtyModal()">
+        <span style="font-size:14px; font-weight:bold; color:#555;">枚</span>
+        <span style="font-size:11px; color:#777; margin-left:6px;" id="modalMaxHint">(最大: 95枚)</span>
+      </div>
+
+      <div class="quick-btn-grid">
+        <button type="button" class="btn-quick-val" onclick="modalAddVal(1)">+1</button>
+        <button type="button" class="btn-quick-val" onclick="modalAddVal(5)">+5</button>
+        <button type="button" class="btn-quick-val" onclick="modalAddVal(10)">+10</button>
+        <button type="button" class="btn-quick-val" onclick="modalAddVal(20)">+20</button>
+      </div>
+      <div style="display:flex; gap:6px;">
+        <button type="button" class="btn-quick-val" style="flex:1; background:#fff3e0; color:#e37400; border-color:#ffb74d;" onclick="modalSetMax()">残り全枠をセット</button>
+      </div>
+
+      <div class="keypad-grid">
+        <button type="button" class="btn-keypad" onclick="modalKeypadPress('7')">7</button>
+        <button type="button" class="btn-keypad" onclick="modalKeypadPress('8')">8</button>
+        <button type="button" class="btn-keypad" onclick="modalKeypadPress('9')">9</button>
+        <button type="button" class="btn-keypad" onclick="modalKeypadPress('4')">4</button>
+        <button type="button" class="btn-keypad" onclick="modalKeypadPress('5')">5</button>
+        <button type="button" class="btn-keypad" onclick="modalKeypadPress('6')">6</button>
+        <button type="button" class="btn-keypad" onclick="modalKeypadPress('1')">1</button>
+        <button type="button" class="btn-keypad" onclick="modalKeypadPress('2')">2</button>
+        <button type="button" class="btn-keypad" onclick="modalKeypadPress('3')">3</button>
+        <button type="button" class="btn-keypad clear" onclick="modalKeypadClear()">C</button>
+        <button type="button" class="btn-keypad" onclick="modalKeypadPress('0')">0</button>
+        <button type="button" class="btn-keypad" onclick="modalKeypadBackspace()">⌫</button>
+      </div>
+
+      <div class="modal-action-row">
+        <button type="button" class="btn-modal-submit" onclick="applyQtyModal()">決定・反映</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 寸法仕様モーダル -->
+  <div class="modal-overlay" id="specModal" onclick="closeSpecModal()">
+    <div class="manual-modal-content" style="width: 520px;" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <span style="font-size:16px; font-weight:bold; color:#1a73e8;">📐 エーワン(A-one) 62295 シート寸法仕様</span>
+        <button type="button" class="modal-close-btn" onclick="closeSpecModal()">✕</button>
+      </div>
+
+      <div style="margin-top:10px;">
+        <table class="spec-table">
+          <tr><th>対象製品型番</th><td>A-one 62295 / フォーマット番号: <b>F95A4-1</b></td></tr>
+          <tr><th>用紙サイズ</th><td>A4判（210.0mm × 297.0mm）</td></tr>
+          <tr><th>面付け</th><td>95面（5列 × 19段）</td></tr>
+          <tr><th>ラベル1片サイズ</th><td>横 35.0mm × 縦 12.0mm（角丸）</td></tr>
+          <tr><th>左右余白</th><td>左: 13.5mm / 右: 13.5mm</td></tr>
+          <tr><th>上下余白</th><td>上: 16.5mm / 下: 16.5mm</td></tr>
+          <tr><th>ラベル間隔</th><td>横: 2.0mm / 縦: 2.0mm</td></tr>
+        </table>
+      </div>
+
+      <div style="text-align:right; margin-top:16px;">
+        <button type="button" class="btn btn-spec" onclick="closeSpecModal()">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 使い方マニュアルモーダル -->
+  <div class="modal-overlay" id="manualModal" onclick="closeManualModal()">
+    <div class="manual-modal-content" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <span style="font-size:16px; font-weight:bold; color:#1a73e8;">❓ 使い方マニュアル</span>
+        <button type="button" class="modal-close-btn" onclick="closeManualModal()">✕</button>
+      </div>
+
+      <div style="margin-top:12px;">
+        <div class="manual-step-box">
+          <div class="manual-step-title">① 商品の追加と賞味期限の設定</div>
+          「＋ 商品を追加」ボタンを押して商品を選択します。初期状態は「空欄」が選択されています。日付を印字したい場合は「空欄」チェックを外して日付を指定してください。
+        </div>
+        <div class="manual-step-box">
+          <div class="manual-step-title">② 枚数の指定（一発「全面」ボタン対応）</div>
+          「全面」ボタンを押すとシート全体（残り空き枠すべて）を一括で埋められます。枚数を細かく指定したい場合は赤い「0枚」枠をクリックしてテンキーで入力します。
+        </div>
+        <div class="manual-step-box">
+          <div class="manual-step-title">③ 使いかけシートの再利用</div>
+          下部のプレビュー画面で、空いている白い枠をクリックすると、そこから印字を開始できます。画面上端・左端の青い目盛り（1〜5列、1〜19行）で位置を確認できます。
+        </div>
+      </div>
+
+      <div style="text-align:right; margin-top:16px;">
+        <button type="button" class="btn btn-spec" onclick="closeManualModal()">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let masterList = [];
+    let allProductMaster = []; // 全商品マスタ用
+    let itemRows = [];
+    let startSlotIndex = 0;
+    let currentZoom = 1.0;
+    let activeModalRowId = null;
+
+    window.onload = function() {
+      // 1. 通常の商品リスト（よく使う商品）を取得
+      google.script.run
+        .withSuccessHandler(function(data) {
+          masterList = data || [];
+          document.getElementById('sheetsContainer').innerHTML = '';
+          updatePreview();
+        })
+        .withFailureHandler(function(err) {
+          document.getElementById('sheetsContainer').innerHTML = '<div style="color:red; padding:30px;">商品リストの取得に失敗しました。</div>';
+        })
+        .getProductMasterList();
+
+      // 2. 申請モーダル用の全商品マスタを取得
+      google.script.run
+        .withSuccessHandler(function(list) {
+          allProductMaster = list || [];
+          const sel = document.getElementById('reqProductSelect');
+          if (sel) {
+            sel.innerHTML = '<option value="">-- 商品をリストから選択してください --</option>';
+            allProductMaster.forEach(m => {
+              const opt = document.createElement('option');
+              opt.value = m.productName;
+              opt.textContent = `[#${m.recordNo}] ${m.productName}`;
+              sel.appendChild(opt);
+            });
+          }
+        })
+        .getAllProductMaster();
+    };
+
+    function addNewItemRow() {
+      const rowId = 'row_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+      const defaultDate = new Date();
+      defaultDate.setDate(defaultDate.getDate() + 180);
+      const dateStr = defaultDate.toISOString().split('T')[0];
+
+      const item = {
+        id: rowId,
+        recordNo: '',
+        productName: '',
+        expiryDate: dateStr,
+        isBlank: true,
+        qty: 0
+      };
+
+      itemRows.push(item);
+      renderItemRowsUI();
+      updatePreview();
+
+      setTimeout(() => {
+        const inp = document.getElementById(`search_${rowId}`);
+        if (inp) inp.focus();
+      }, 50);
+    }
+
+    function removeItemRow(rowId) {
+      itemRows = itemRows.filter(r => r.id !== rowId);
+      renderItemRowsUI();
+      updatePreview();
+    }
+
+    function fillItemToFull(rowId) {
+      const item = itemRows.find(r => r.id === rowId);
+      if (!item) return;
+
+      let otherRowsTotal = 0;
+      itemRows.forEach(r => {
+        if (r.id !== rowId) otherRowsTotal += (r.qty || 0);
+      });
+
+      const remain = Math.max(1, 95 - startSlotIndex - otherRowsTotal);
+      item.qty = remain;
+      renderItemRowsUI();
+      updatePreview();
+    }
+
+    function renderItemRowsUI() {
+      const container = document.getElementById('itemsContainer');
+      container.innerHTML = '';
+
+      if (itemRows.length === 0) {
+        container.innerHTML = '<div style="font-size:12px; color:#666; padding:4px 8px;">印刷する商品がありません。「＋ 商品を追加」ボタンから商品を選んでください。</div>';
+        return;
+      }
+
+      itemRows.forEach((item, index) => {
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'item-row';
+        rowDiv.id = item.id;
+
+        const isZero = (item.qty === 0 || !item.qty);
+        const qtyBoxClass = isZero ? 'input-num-trigger is-zero-warning' : 'input-num-trigger';
+        const qtyBoxText = isZero ? '🔴 0枚' : `${item.qty} 枚`;
+
+        rowDiv.innerHTML = `
+          <span class="row-index-badge">#${index + 1}</span>
+          <input type="text" class="input-search-code" id="search_${item.id}" value="${item.recordNo}" placeholder="番号" title="番号で検索" maxlength="5" oninput="onCodeSearchChange('${item.id}', this.value)">
+          <span id="prodName_${item.id}" style="font-size: 12px; font-weight: bold; color: #1a73e8; background: #fff; padding: 4px 8px; border-radius: 4px; border: 1px solid #dadce0; min-width: 220px; display: inline-block;">
+            ${item.productName || '-- 商品名未設定 --'}
+          </span>
+          <input type="date" class="input-expiry-date" id="exp_${item.id}" value="${item.expiryDate}" ${item.isBlank ? 'disabled' : ''} onchange="onExpiryChange('${item.id}', this.value)">
+          <label class="blank-toggle-label ${item.isBlank ? 'active' : ''}">
+            <input type="checkbox" ${item.isBlank ? 'checked' : ''} onchange="onBlankToggle('${item.id}', this.checked)"> 空欄
+          </label>
+          <div class="${qtyBoxClass}" onclick="openQtyModal('${item.id}')" title="クリックして印刷枚数を指定">${qtyBoxText}</div>
+          <button type="button" class="btn-fill-all" onclick="fillItemToFull('${item.id}')" title="残りの全枠をこの商品で埋める">残りの空白面に適用</button>
+          <button type="button" class="btn-row-del" onclick="removeItemRow('${item.id}')">✕</button>
+        `;
+
+        container.appendChild(rowDiv);
+      });
+    }
+
+    /**
+     * レコード番号が入力されたときの処理（未登録時は申請ボタンを表示）
+     */
+    function onCodeSearchChange(itemId, val) {
+      const cleanVal = String(val || "").trim();
+      const item = itemRows.find(r => r.id === itemId);
+      if (!item) return;
+
+      if (!masterList || masterList.length === 0) {
+        console.warn("商品マスタがまだ読み込まれていません");
+        return;
+      }
+
+      const matched = masterList.find(m => String(m.recordNo).trim() === cleanVal);
+      const nameLabel = document.getElementById(`prodName_${itemId}`);
+
+      if (matched) {
+        item.recordNo = cleanVal;
+        item.productName = matched.productName;
+        if (nameLabel) {
+          nameLabel.innerHTML = `<span style="color: #137333;">${matched.productName}</span>`;
+        }
+      } else {
+        item.recordNo = cleanVal;
+        item.productName = "";
+        if (nameLabel) {
+          if (cleanVal.length >= 3) {
+            nameLabel.innerHTML = `
+              <span style="color: #c5221f; font-size: 11px;">⚠️ 該当なし</span>
+              <button type="button" class="btn btn-sm" style="padding: 2px 6px; font-size: 11px; background: #e37400; color: #fff; border: none; border-radius: 3px; margin-left: 6px; cursor: pointer;" 
+                      onclick="openAddProductModal('${itemId}', '${cleanVal}')">＋ 申請する</button>
+            `;
+          } else {
+            nameLabel.innerText = cleanVal ? "⚠️ 番号が短いです" : "-- 商品名未設定 --";
+            nameLabel.style.color = '#c5221f';
+          }
+        }
+      }
+
+      if (typeof updatePreview === 'function') {
+        updatePreview();
+      }
+    }
+
+    function onExpiryChange(rowId, val) {
+      const item = itemRows.find(r => r.id === rowId);
+      if (item) {
+        item.expiryDate = val;
+        updatePreview();
+      }
+    }
+
+    function onBlankToggle(rowId, checked) {
+      const item = itemRows.find(r => r.id === rowId);
+      if (item) {
+        item.isBlank = checked;
+        renderItemRowsUI();
+        updatePreview();
+      }
+    }
+
+    function openQtyModal(rowId) {
+      activeModalRowId = rowId;
+      const item = itemRows.find(r => r.id === rowId);
+      if (!item) return;
+
+      document.getElementById('modalItemTitle').innerText = item.productName || `[#${item.recordNo || '未選択'}]`;
+      document.getElementById('modalInputVal').value = item.qty || 0;
+      document.getElementById('qtyModal').style.display = 'flex';
+      document.getElementById('modalInputVal').focus();
+      document.getElementById('modalInputVal').select();
+    }
+
+    function closeQtyModal() {
+      document.getElementById('qtyModal').style.display = 'none';
+      activeModalRowId = null;
+    }
+
+    function onModalBgClick(e) {
+      if (e.target.id === 'qtyModal') closeQtyModal();
+    }
+
+    function modalAddVal(delta) {
+      const inp = document.getElementById('modalInputVal');
+      let val = parseInt(inp.value, 10) || 0;
+      val = Math.max(0, Math.min(95, val + delta));
+      inp.value = val;
+    }
+
+    function modalSetMax() {
+      let currentTotalWithoutActive = 0;
+      itemRows.forEach(r => {
+        if (r.id !== activeModalRowId) currentTotalWithoutActive += (r.qty || 0);
+      });
+      const remain = Math.max(0, 95 - startSlotIndex - currentTotalWithoutActive);
+      document.getElementById('modalInputVal').value = remain;
+    }
+
+    function modalKeypadPress(ch) {
+      const inp = document.getElementById('modalInputVal');
+      let current = inp.value;
+      if (current === '0') current = '';
+      current += ch;
+      let num = parseInt(current, 10) || 0;
+      inp.value = Math.min(95, num);
+    }
+
+    function modalKeypadClear() {
+      document.getElementById('modalInputVal').value = '0';
+    }
+
+    function modalKeypadBackspace() {
+      const inp = document.getElementById('modalInputVal');
+      let current = inp.value;
+      current = current.slice(0, -1);
+      inp.value = current === '' ? '0' : current;
+    }
+
+    function onModalInputDirect(val) {
+      const inp = document.getElementById('modalInputVal');
+      let num = parseInt(val.replace(/[^0-9]/g, ''), 10) || 0;
+      inp.value = Math.min(95, num);
+    }
+
+    function applyQtyModal() {
+      if (!activeModalRowId) return;
+      const item = itemRows.find(r => r.id === activeModalRowId);
+      if (item) {
+        const val = parseInt(document.getElementById('modalInputVal').value, 10) || 0;
+        item.qty = Math.max(0, Math.min(95, val));
+        renderItemRowsUI();
+        updatePreview();
+      }
+      closeQtyModal();
+    }
+
+    function updatePreview() {
+      const container = document.getElementById('sheetsContainer');
+      container.innerHTML = '';
+
+      let totalQty = 0;
+      itemRows.forEach(r => totalQty += (r.qty || 0));
+
+      const remainSlots = Math.max(0, 95 - startSlotIndex - totalQty);
+      document.getElementById('lblTotalUsage').innerText = `合計: ${totalQty} / 95枚 (残り ${remainSlots}枚)`;
+      document.getElementById('lblStartPos').innerText = `${startSlotIndex + 1} 番目 ${startSlotIndex === 0 ? '(先頭)' : ''}`;
+
+      const sequence = [];
+      itemRows.forEach(r => {
+        for (let i = 0; i < (r.qty || 0); i++) {
+          sequence.push(r);
+        }
+      });
+
+      const flowRadios = document.getElementsByName('flowDir');
+      let isVertical = true;
+      for (let radio of flowRadios) {
+        if (radio.checked && radio.value === 'HORIZONTAL') isVertical = false;
+      }
+
+      const sheetDiv = document.createElement('div');
+      sheetDiv.className = 'sheet-a4';
+
+      const guideDiv = document.createElement('div');
+      guideDiv.className = 'screen-grid-guide';
+
+      let colGuideHtml = '<div class="guide-col-header">';
+      for (let c = 1; c <= 5; c++) {
+        colGuideHtml += `<div class="guide-col-cell">${c}列</div>`;
+      }
+      colGuideHtml += '</div>';
+
+      let rowGuideHtml = '<div class="guide-row-header">';
+      for (let r = 1; r <= 19; r++) {
+        rowGuideHtml += `<div class="guide-row-cell">${r}</div>`;
+      }
+      rowGuideHtml += '</div>';
+
+      guideDiv.innerHTML = colGuideHtml + rowGuideHtml;
+      sheetDiv.appendChild(guideDiv);
+
+      const gridDiv = document.createElement('div');
+      gridDiv.className = 'label-grid';
+
+      for (let slot = 0; slot < 95; slot++) {
+        let col = 0;
+        let row = 0;
+        if (isVertical) {
+          col = Math.floor(slot / 19);
+          row = slot % 19;
+        } else {
+          row = Math.floor(slot / 5);
+          col = slot % 5;
+        }
+
+        const cell = document.createElement('div');
+        cell.className = 'label-cell empty-cell';
+        cell.dataset.slotIndex = slot;
+
+        if (slot === startSlotIndex) {
+          cell.classList.add('is-start-slot');
+        }
+
+        cell.style.gridColumnStart = col + 1;
+        cell.style.gridRowStart = row + 1;
+
+        if (slot >= startSlotIndex && (slot - startSlotIndex) < sequence.length) {
+          const item = sequence[slot - startSlotIndex];
+          cell.classList.remove('empty-cell');
+
+          let expText = '';
+          if (!item.isBlank && item.expiryDate) {
+            const parts = item.expiryDate.split('-');
+            if (parts.length === 3) {
+              expText = `${parts[0]}.${parseInt(parts[1], 10)}.${parseInt(parts[2], 10)}`;
+            } else {
+              expText = item.expiryDate;
+            }
+          }
+
+          cell.innerHTML = `
+            <div class="cell-row-top">
+              <span class="cell-product-name">${escapeHtml(item.productName || '品名未設定')}</span>
+            </div>
+            <div class="cell-row-body">
+              <div class="cell-left-col">
+                <div class="cell-code-box">
+                  <span class="cell-code-number">${escapeHtml(item.recordNo || '0000')}</span>
+                </div>
+                <span class="cell-stamp-label">賞味期限</span>
+              </div>
+              <div class="cell-stamp-value-overlay">${escapeHtml(expText)}</div>
+            </div>
+          `;
+        } else {
+          cell.onclick = function() {
+            startSlotIndex = slot;
+            updatePreview();
+          };
+        }
+
+        gridDiv.appendChild(cell);
+      }
+
+      sheetDiv.appendChild(gridDiv);
+      container.appendChild(sheetDiv);
+
+      autoFitFontSizes();
+    }
+
+    function autoFitFontSizes() {
+      const topRows = document.querySelectorAll('.cell-row-top');
+      topRows.forEach(row => {
+        const span = row.querySelector('.cell-product-name');
+        if (!span) return;
+        span.style.transform = 'none';
+        const availW = row.clientWidth - 4;
+        const textW = span.offsetWidth;
+        if (textW > availW && availW > 0) {
+          const ratio = (availW / textW) * 0.98;
+          span.style.transform = `scaleX(${ratio.toFixed(3)})`;
+        }
+      });
+    }
+
+    function openPrintWindow() {
+      const container = document.getElementById('sheetsContainer');
+      if (!container) return;
+
+      const totalSlots = container.querySelectorAll('.label-cell:not(.empty-cell)').length;
+      if (totalSlots === 0) {
+        alert('印刷する商品がありません。先に商品を追加して枚数を指定してください。');
+        return;
+      }
+
+      const clone = container.cloneNode(true);
+      const guides = clone.querySelectorAll('.screen-grid-guide');
+      for (let i = 0; i < guides.length; i++) {
+        guides[i].remove();
+      }
+      const sheetHtml = clone.innerHTML;
+
+      const printDoc = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>ラベル印刷 (A-one 62295)</title><style>' +
+        '@page { size: A4 portrait; margin: 0; }' +
+        '* { box-sizing: border-box; }' +
+        'body { margin: 0; padding: 0; background: white; font-family: "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }' +
+        '.sheet-a4 { width: 210mm; height: 297mm; background: white; padding-top: 16.5mm; padding-bottom: 16.5mm; padding-left: 13.5mm; padding-right: 13.5mm; page-break-after: avoid !important; overflow: hidden; box-sizing: border-box; }' +
+        '.label-grid { display: grid; grid-template-columns: repeat(5, 35.0mm); grid-template-rows: repeat(19, 12.0mm); column-gap: 2.0mm; row-gap: 2.0mm; width: 183.0mm; height: 264.0mm; }' +
+        '.label-cell { width: 35.0mm; height: 12.0mm; border-radius: 1.2mm; border: 0.5px solid rgba(0,0,0,0.15); display: flex; flex-direction: column; overflow: hidden; background: #ffea3b !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }' +
+        '.label-cell.empty-cell { background: transparent !important; border: none !important; }' +
+        '.cell-row-top { height: 4.2mm; padding: 1.1mm 1.0mm 0.1mm 1.0mm; border-bottom: 0.6px solid #111; display: flex; align-items: center; overflow: hidden; white-space: nowrap; }' +
+        '.cell-product-name { font-size: 6.8pt; font-weight: 900; color: #000; white-space: nowrap; line-height: 1.0; letter-spacing: -0.2px; display: inline-block; transform-origin: left center; }' +
+        '.cell-row-body { flex: 1; height: 7.8mm; padding: 0.4mm 1.0mm 0.8mm 1.0mm; display: flex; position: relative; }' +
+        '.cell-left-col { width: 9.8mm; height: 100%; display: flex; flex-direction: column; justify-content: space-between; align-items: center; z-index: 2; }' +
+        '.cell-code-box { width: 9.8mm; height: 3.1mm; border: 0.8px solid #000; padding: 0 0.2mm; border-radius: 0.5px; background: #ffea3b !important; line-height: 1.0; display: flex; align-items: center; justify-content: center; overflow: hidden; margin-top: 0.2mm; }' +
+        '.cell-code-number { font-size: 6.1pt; font-weight: 900; color: #000; font-family: "Arial Black", "Arial", sans-serif; letter-spacing: -0.1px; line-height: 1.0; white-space: nowrap; }' +
+        '.cell-stamp-label { font-size: 5.1pt; color: #000; font-weight: 800; line-height: 1.0; letter-spacing: 0.05px; white-space: nowrap; margin-bottom: 0.3mm; text-align: center; width: 100%; }' +
+        '.cell-stamp-value-overlay { position: absolute; left: 10.8mm; right: 0.8mm; top: 0.2mm; bottom: 0.4mm; display: flex; align-items: center; justify-content: center; font-size: 8.3pt; font-weight: 900; color: #000; letter-spacing: 0.6px; font-family: "Arial", "Courier New", monospace; }' +
+        '</style></head><body>' +
+        sheetHtml +
+        '<script>window.onload = function() { setTimeout(function() { window.print(); }, 400); };<\/script>' +
+        '</body></html>';
+
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.open();
+        printWindow.document.write(printDoc);
+        printWindow.document.close();
+      } else {
+        alert('印刷ウィンドウが開けませんでした。Safariの設定で「ポップアップブロック」を解除してください。');
+      }
+    }
+
+    function changeZoom(delta) {
+      currentZoom = Math.min(2.0, Math.max(0.3, currentZoom + delta));
+      applyZoom();
+    }
+    function setZoom(val) {
+      currentZoom = Math.min(2.0, Math.max(0.3, val));
+      applyZoom();
+    }
+    function applyZoom() {
+      document.getElementById('sheetsContainer').style.transform = `scale(${currentZoom.toFixed(2)})`;
+      document.getElementById('lblZoomVal').innerText = Math.round(currentZoom * 100) + '%';
+    }
+    function fitPage() {
+      const headerH = document.getElementById('topControlPanel').offsetHeight || 90;
+      const fitScale = Math.min(window.innerWidth / 820, (window.innerHeight - headerH - 40) / 1150);
+      setZoom(Math.max(0.35, fitScale));
+    }
+    function fitWidth() {
+      const fitScale = (window.innerWidth - 30) / 820;
+      setZoom(Math.max(0.35, fitScale));
+    }
+
+    function openSpecModal() { document.getElementById('specModal').style.display = 'flex'; }
+    function closeSpecModal() { document.getElementById('specModal').style.display = 'none'; }
+    function openManualModal() { document.getElementById('manualModal').style.display = 'flex'; }
+    function closeManualModal() { document.getElementById('manualModal').style.display = 'none'; }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    let targetAddRowId = null;
+
+    function onReqProductSelected(sel) {
+      document.getElementById('reqProductName').value = sel.value;
+    }
+
+    function openAddProductModal(rowId, recordNo) {
+      targetAddRowId = rowId;
+      document.getElementById('reqRecordNo').value = recordNo;
+      
+      const sel = document.getElementById('reqProductSelect');
+      const matched = allProductMaster.find(m => String(m.recordNo).trim() === String(recordNo).trim());
+      
+      if (matched) {
+        sel.value = matched.productName;
+        document.getElementById('reqProductName').value = matched.productName;
+      } else {
+        sel.value = "";
+        document.getElementById('reqProductName').value = "";
+      }
+
+      document.getElementById('addProductModal').style.display = 'flex';
+    }
+
+    function closeAddProductModal() {
+      document.getElementById('addProductModal').style.display = 'none';
+      targetAddRowId = null;
+    }
+
+    function submitProductRequest() {
+  const recordNo = document.getElementById('reqRecordNo').value.trim();
+  const productName = document.getElementById('reqProductName').value.trim();
+
+  if (!productName) {
+    alert('申請する商品を選択してください。');
+    return;
+  }
+
+  google.script.run
+    .withSuccessHandler(res => {
+      if (res.success) {
+        alert('✅ 商品の追加申請を送信しました！\n管理者が承認すると商品リストに反映されます。');
+        
+        if (targetAddRowId) {
+          const item = itemRows.find(r => r.id === targetAddRowId);
+          if (item) {
+            // 1. データの状態をクリア（番号も商品名もリセット）
+            item.recordNo = '';
+            item.productName = '';
+            
+            // 2. 画面上のレコード番号入力欄を空にする
+            const searchInp = document.getElementById(`search_${targetAddRowId}`);
+            if (searchInp) searchInp.value = '';
+
+            // 3. 商品名ボックスをすっきりした「申請中」表示にする（完全に何も出さない場合は空文字でもOKです）
+            const nameLabel = document.getElementById(`prodName_${targetAddRowId}`);
+            if (nameLabel) {
+              nameLabel.innerHTML = `<span style="color: #e37400; font-weight: bold;">-- 申請中（承認待ち） --</span>`;
+            }
+          }
+        }
+        closeAddProductModal();
+        updatePreview();
+      } else {
+        alert('申請エラー: ' + res.message);
+      }
+    })
+    .withFailureHandler(err => {
+      alert('通信エラー: ' + err.message);
+    })
+    .requestProductAddition({ recordNo: recordNo, productName: productName });
+}
+
+    function openApprovalModal() {
+  document.getElementById('approvalModal').style.display = 'flex';
+  loadPendingRequests();
+}
+
+function closeApprovalModal() {
+  document.getElementById('approvalModal').style.display = 'none';
+}
+
+let cachedPendingRequests = [];
+
+    function loadPendingRequests() {
+      const container = document.getElementById('pendingRequestsContainer');
+      container.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">読み込み中...</div>';
+
+      google.script.run
+        .withSuccessHandler(requests => {
+          cachedPendingRequests = requests || [];
+          if (cachedPendingRequests.length === 0) {
+            container.innerHTML = '<div style="text-align: center; color: #888; padding: 20px;">現在、未承認の申請はありません。</div>';
+            return;
+          }
+
+          let html = '';
+          cachedPendingRequests.forEach((req, idx) => {
+            html += `
+              <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; padding: 10px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <div style="font-size: 11px; color: #666;">申請日時: ${req.date}</div>
+                  <div style="font-size: 13px; font-weight: bold; color: #1a73e8;">[#${req.recordNo}] ${escapeHtml(req.productName)}</div>
+                </div>
+                <button type="button" class="btn btn-sm" style="background: #34a853; color: white; font-weight: bold; padding: 6px 12px;" 
+                        onclick="executeDirectApprove(${req.rowIndex}, '${req.recordNo}', '${escapeHtml(req.productName)}')">承認して追加</button>
+              </div>
+            `;
+          });
+          container.innerHTML = html;
+        })
+        .getPendingProductRequests();
+    }
+
+    // ボタンを押したら確認なしで直接承認して商品リストに追加する関数
+    function executeDirectApprove(rowIndex, recordNo, productName) {
+      google.script.run
+        .withSuccessHandler(res => {
+          if (res.success) {
+            alert(`✅ [#${recordNo}] ${productName} の承認が完了し、商品リストに登録されました！`);
+            closeApprovalModal(); // 申請一覧モーダルを閉じる
+
+            // 最新の商品リストを再取得して画面を更新
+            google.script.run
+              .withSuccessHandler(data => {
+                masterList = data || [];
+                renderItemRowsUI();
+                updatePreview();
+              })
+              .getProductMasterList();
+          } else {
+            alert('エラー: ' + res.message);
+          }
+        })
+        .withFailureHandler(err => {
+          alert('通信エラー: ' + err.message);
+        })
+        .approveProductRequest(rowIndex, recordNo, productName);
+    }
+
+let pendingApproveData = null;
+
+    function approveRequest(rowIndex, recordNo, productName) {
+      pendingApproveData = { rowIndex, recordNo, productName };
+      
+      // kintoneのURLを動的に生成してリンクとテキストにセット
+      const kintoneUrl = "https://matoil.cybozu.com/k/307/show" + "#record=" + recordNo;
+      const linkEl = document.getElementById('kintoneLink');
+      if (linkEl) {
+        linkEl.href = kintoneUrl;
+        linkEl.innerText = kintoneUrl;
+      }
+      
+      const targetNameEl = document.getElementById('kintoneTargetName');
+      if (targetNameEl) {
+        targetNameEl.innerText = `[#${recordNo}] ${productName}`;
+      }
+      
+      // 専用の確認モーダルを表示
+      const modalEl = document.getElementById('kintoneCheckModal');
+      if (modalEl) {
+        modalEl.style.display = 'flex';
+      }
+    }
+
+    function closeKintoneCheckModal() {
+      const modalEl = document.getElementById('kintoneCheckModal');
+      if (modalEl) {
+        modalEl.style.display = 'none';
+      }
+      pendingApproveData = null;
+    }
+
+    // モーダル内の「確認完了して承認する」ボタンが押されたときの処理
+    document.addEventListener('DOMContentLoaded', function() {
+      const execBtn = document.getElementById('btnExecApprove');
+      if (execBtn) {
+        execBtn.onclick = function() {
+          if (!pendingApproveData) return;
+          const { rowIndex, recordNo, productName } = pendingApproveData;
+          
+          closeKintoneCheckModal();
+
+          google.script.run
+            .withSuccessHandler(res => {
+              if (res.success) {
+                alert('✅ 承認が完了し、商品リストに登録されました！');
+                closeApprovalModal(); // 申請一覧モーダルも閉じる
+
+                // 最新の商品リストを再取得して画面を更新
+                google.script.run
+                  .withSuccessHandler(data => {
+                    masterList = data || [];
+                    renderItemRowsUI();
+                    updatePreview();
+                  })
+                  .getProductMasterList();
+              } else {
+                alert('エラー: ' + res.message);
+              }
+            })
+            .withFailureHandler(err => {
+              alert('通信エラー: ' + err.message);
+            })
+            .approveProductRequest(rowIndex, recordNo, productName);
+        };
+      }
+    });
+
+  </script>
+
+<!-- ★ここに「申請一覧・承認用モーダル」を追加 -->
+  <div class="modal-overlay" id="approvalModal" onclick="closeApprovalModal()">
+    <div class="modal-content" onclick="event.stopPropagation()" style="width: 500px; max-height: 80vh; overflow-y: auto;">
+      <div class="modal-header">
+        <span class="modal-title">📥 届いている商品追加申請の確認</span>
+        <button type="button" class="modal-close-btn" onclick="closeApprovalModal()">✕</button>
+      </div>
+      <div style="font-size: 12px; color: #555; margin-bottom: 10px;">
+        追加申請の一覧です。「承認」を押すと商品リストに自動登録されます。
+        必ず最新のkintoneを確認してレコード番号と名称が一致しているか確認してから承認してください。
+        違う場合はマスタの更新が必要なため、今村に連絡ください。
+      </div>
+      
+      <div id="pendingRequestsContainer" style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="text-align: center; color: #666; padding: 20px;">読み込み中...</div>
+      </div>
+
+      <div class="modal-action-row" style="margin-top: 15px; text-align: right;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeApprovalModal()">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 商品追加申請モーダル -->
+<div class="modal-overlay" id="addProductModal" onclick="closeAddProductModal()">
+  <div class="modal-content" onclick="event.stopPropagation()" style="width: 600px; max-width: 95vw;">
+    <div class="modal-header">
+      <span class="modal-title">📦 商品マスター追加申請</span>
+      <button type="button" class="modal-close-btn" onclick="closeAddProductModal()">✕</button>
+    </div>
+    <div style="font-size: 12px; color: #555; line-height: 1.5;">
+      指定されたレコード番号は商品リストにありません。<br>全商品マスタから正しい商品を選択して申請してください。
+    </div>
+    <div style="margin-top: 10px;">
+      <label style="font-size: 11px; font-weight: bold;">レコード番号:</label>
+      <input type="text" id="reqRecordNo" class="form-control" readonly style="background: #f1f3f4; font-weight: bold; width: 140px;">
+    </div>
+    <div style="margin-top: 10px;">
+      <label style="font-size: 11px; font-weight: bold;">希望する商品名（全商品マスタから選択）:</label>
+      <select id="reqProductSelect" class="form-select form-select-sm" style="font-size: 13px; font-weight: bold; width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;" onchange="onReqProductSelected(this)">
+        <option value="">-- 全商品マスタを読み込み中... --</option>
+      </select>
+      <input type="hidden" id="reqProductName">
+    </div>
+    <div class="modal-action-row" style="margin-top: 18px;">
+      <button type="button" class="btn-modal-submit" onclick="submitProductRequest()" style="background: #e37400; padding: 10px; font-size: 13px;">追加申請する</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
