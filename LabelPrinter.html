@@ -958,9 +958,21 @@
      * レコード番号が入力されたときの処理（未登録時は申請ボタンを表示）
      */
     function onCodeSearchChange(itemId, val) {
-      const cleanVal = String(val || "").trim();
+      // 全角英数字を自動的に半角に変換する
+      const convertedVal = String(val || "").replace(/[Ａ-Ｚａ-ｚ０-９]/g, function(s) {
+        return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+      });
+
+      // 入力欄自体の表示も半角に即時更新
+      const inputEl = document.getElementById(`search_${itemId}`);
+      if (inputEl && inputEl.value !== convertedVal) {
+        inputEl.value = convertedVal;
+      }
+
+      const cleanVal = convertedVal.trim();
       const item = itemRows.find(r => r.id === itemId);
       if (!item) return;
+...
 
       if (!masterList || masterList.length === 0) {
         console.warn("商品マスタがまだ読み込まれていません");
