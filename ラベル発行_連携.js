@@ -1,8 +1,8 @@
 /**
  * 商品リストおよびロット台帳からラベル発行用のマスタ一覧を取得
  */
-function getMasterProductList() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+function getProductMasterList() {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
   const prodSheet = ss.getSheetByName("商品リスト");
   const lotSheet = ss.getSheetByName("ロット台帳");
 
