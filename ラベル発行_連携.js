@@ -1,7 +1,7 @@
 /**
  * 商品リストおよびロット台帳からラベル発行用のマスタ一覧を取得（食品トレース側を参照）
  */
-function getMasterProductList() {
+function getProductMasterList() {
   // 食品トレースのスプレッドシートID
   const traceSpreadsheetId = "1aBT8g4vPYv2jTNE9qS-mTGVZl3wkmc186yIn7EAg5gY";
   const ss = SpreadsheetApp.openById(traceSpreadsheetId);
