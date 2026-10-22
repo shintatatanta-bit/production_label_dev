@@ -11,7 +11,7 @@ function getProductMasterList() {
 
   const productMap = {};
 
-  // ① 商品リストの読み込み（A列: レコード番号, B列: 商品名）
+  // ① 商品リストの読み込み（A列: レコード番号, B列: 商品名）_
   if (prodSheet) {
     const prodData = prodSheet.getDataRange().getValues();
     for (let r = 1; r < prodData.length; r++) {
