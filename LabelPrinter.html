@@ -972,7 +972,6 @@
       const cleanVal = convertedVal.trim();
       const item = itemRows.find(r => r.id === itemId);
       if (!item) return;
-...
 
       if (!masterList || masterList.length === 0) {
         console.warn("商品マスタがまだ読み込まれていません");
