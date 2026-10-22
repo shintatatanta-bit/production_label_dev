@@ -1,8 +1,11 @@
 /**
- * 商品リストおよびロット台帳からラベル発行用のマスタ一覧を取得
+ * 商品リストおよびロット台帳からラベル発行用のマスタ一覧を取得（食品トレース側を参照）
  */
-function getProductMasterList() {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+function getMasterProductList() {
+  // 食品トレースのスプレッドシートID
+  const traceSpreadsheetId = "1aBT8g4vPYv2jTNE9qS-mTGVZl3wkmc186yIn7EAg5gY";
+  const ss = SpreadsheetApp.openById(traceSpreadsheetId);
+  
   const prodSheet = ss.getSheetByName("商品リスト");
   const lotSheet = ss.getSheetByName("ロット台帳");
 
@@ -24,11 +27,11 @@ function getProductMasterList() {
     }
   }
 
-  // ② ロット台帳から最新の賞味期限目安を補完（A列: ロットID, B列: 商品名, D列: 賞味期限）
+  // ② ロット台帳から最新の賞味期限目安を補完
   if (lotSheet) {
     const lotData = lotSheet.getDataRange().getValues();
     for (let r = 1; r < lotData.length; r++) {
-      const lotId = String(lotData[r][0] || "").trim(); // 5962-001 など
+      const lotId = String(lotData[r][0] || "").trim();
       const recNo = lotId.split("-")[0];
       const rawExp = lotData[r][3];
 
