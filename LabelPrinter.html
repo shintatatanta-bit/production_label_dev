@@ -100,7 +100,7 @@
       cursor: not-allowed;
     }
 
-    /* 日付加算ボタンのスタイル */
+    /* 日付操作ボタンのグループ */
     .date-shortcut-group {
       display: inline-flex;
       gap: 2px;
@@ -120,6 +120,14 @@
       background: #e8eaed;
       border-color: #1a73e8;
       color: #1a73e8;
+    }
+    .btn-date-today {
+      background: #e8f0fe;
+      color: #1a73e8;
+      border-color: #c2e7ff;
+    }
+    .btn-date-today:hover {
+      background: #d2e3fc;
     }
     .btn-date-shift:disabled {
       opacity: 0.5;
@@ -897,10 +905,10 @@
         .getAllProductMaster();
     };
 
+    // 新規行作成時の日付（今日）
     function addNewItemRow() {
       const rowId = 'row_' + Date.now() + '_' + Math.floor(Math.random()*1000);
       
-      // 開いた日（今日）を初期値に設定
       const defaultDate = new Date();
       const dateStr = defaultDate.toISOString().split('T')[0];
 
@@ -916,31 +924,20 @@
       itemRows.push(item);
       renderItemRowsUI();
       updatePreview();
-
-      setTimeout(() => {
-        const inp = document.getElementById(`search_${rowId}`);
-        if (inp) inp.focus();
-      }, 50);
     }
 
-    function removeItemRow(rowId) {
-      itemRows = itemRows.filter(r => r.id !== rowId);
-      renderItemRowsUI();
-      updatePreview();
-    }
-
-    function fillItemToFull(rowId) {
+    // 本日（今日）に戻す関数
+    function resetToToday(rowId) {
       const item = itemRows.find(r => r.id === rowId);
       if (!item) return;
 
-      let otherRowsTotal = 0;
-      itemRows.forEach(r => {
-        if (r.id !== rowId) otherRowsTotal += (r.qty || 0);
-      });
+      const todayStr = new Date().toISOString().split('T')[0];
+      item.expiryDate = todayStr;
 
-      const remain = Math.max(1, 95 - startSlotIndex - otherRowsTotal);
-      item.qty = remain;
-      renderItemRowsUI();
+      const dateInput = document.getElementById(`exp_${rowId}`);
+      if (dateInput) {
+        dateInput.value = todayStr;
+      }
       updatePreview();
     }
 
@@ -949,7 +946,6 @@
       const item = itemRows.find(r => r.id === rowId);
       if (!item) return;
 
-      // 現在の日付欄の値、または今日を基準にする
       let baseDate = item.expiryDate ? new Date(item.expiryDate) : new Date();
       if (isNaN(baseDate.getTime())) {
         baseDate = new Date();
@@ -960,7 +956,6 @@
 
       item.expiryDate = baseDate.toISOString().split('T')[0];
       
-      // UIを更新
       const dateInput = document.getElementById(`exp_${rowId}`);
       if (dateInput) {
         dateInput.value = item.expiryDate;
@@ -994,6 +989,7 @@
           </span>
           <input type="date" class="input-expiry-date" id="exp_${item.id}" value="${item.expiryDate}" ${item.isBlank ? 'disabled' : ''} onchange="onExpiryChange('${item.id}', this.value)">
           <div class="date-shortcut-group">
+            <button type="button" class="btn-date-shift btn-date-today" ${item.isBlank ? 'disabled' : ''} onclick="resetToToday('${item.id}')" title="今日に戻す">本日</button>
             <button type="button" class="btn-date-shift" ${item.isBlank ? 'disabled' : ''} onclick="shiftExpiryDate('${item.id}', 1, 0)" title="1年後">+1年</button>
             <button type="button" class="btn-date-shift" ${item.isBlank ? 'disabled' : ''} onclick="shiftExpiryDate('${item.id}', 0, 6)" title="6か月後">+6か月</button>
             <button type="button" class="btn-date-shift" ${item.isBlank ? 'disabled' : ''} onclick="shiftExpiryDate('${item.id}', 0, 3)" title="3か月後">+3か月</button>
