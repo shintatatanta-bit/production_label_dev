@@ -100,6 +100,32 @@
       cursor: not-allowed;
     }
 
+    /* 日付加算ボタンのスタイル */
+    .date-shortcut-group {
+      display: inline-flex;
+      gap: 2px;
+    }
+    .btn-date-shift {
+      background: #f1f3f4;
+      border: 1px solid #dadce0;
+      color: #333;
+      font-size: 10px;
+      font-weight: bold;
+      padding: 3px 5px;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .btn-date-shift:hover {
+      background: #e8eaed;
+      border-color: #1a73e8;
+      color: #1a73e8;
+    }
+    .btn-date-shift:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
     .blank-toggle-label {
       font-size: 11px;
       cursor: pointer;
@@ -873,8 +899,9 @@
 
     function addNewItemRow() {
       const rowId = 'row_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+      
+      // 開いた日（今日）を初期値に設定
       const defaultDate = new Date();
-      defaultDate.setDate(defaultDate.getDate() + 180);
       const dateStr = defaultDate.toISOString().split('T')[0];
 
       const item = {
@@ -917,6 +944,30 @@
       updatePreview();
     }
 
+    // 日付に年・月を加算する関数
+    function shiftExpiryDate(rowId, years, months) {
+      const item = itemRows.find(r => r.id === rowId);
+      if (!item) return;
+
+      // 現在の日付欄の値、または今日を基準にする
+      let baseDate = item.expiryDate ? new Date(item.expiryDate) : new Date();
+      if (isNaN(baseDate.getTime())) {
+        baseDate = new Date();
+      }
+
+      baseDate.setFullYear(baseDate.getFullYear() + years);
+      baseDate.setMonth(baseDate.getMonth() + months);
+
+      item.expiryDate = baseDate.toISOString().split('T')[0];
+      
+      // UIを更新
+      const dateInput = document.getElementById(`exp_${rowId}`);
+      if (dateInput) {
+        dateInput.value = item.expiryDate;
+      }
+      updatePreview();
+    }
+
     function renderItemRowsUI() {
       const container = document.getElementById('itemsContainer');
       container.innerHTML = '';
@@ -942,6 +993,11 @@
             ${item.productName || '-- 商品名未設定 --'}
           </span>
           <input type="date" class="input-expiry-date" id="exp_${item.id}" value="${item.expiryDate}" ${item.isBlank ? 'disabled' : ''} onchange="onExpiryChange('${item.id}', this.value)">
+          <div class="date-shortcut-group">
+            <button type="button" class="btn-date-shift" ${item.isBlank ? 'disabled' : ''} onclick="shiftExpiryDate('${item.id}', 1, 0)" title="1年後">+1年</button>
+            <button type="button" class="btn-date-shift" ${item.isBlank ? 'disabled' : ''} onclick="shiftExpiryDate('${item.id}', 0, 6)" title="6か月後">+6か月</button>
+            <button type="button" class="btn-date-shift" ${item.isBlank ? 'disabled' : ''} onclick="shiftExpiryDate('${item.id}', 0, 3)" title="3か月後">+3か月</button>
+          </div>
           <label class="blank-toggle-label ${item.isBlank ? 'active' : ''}">
             <input type="checkbox" ${item.isBlank ? 'checked' : ''} onchange="onBlankToggle('${item.id}', this.checked)"> 空欄
           </label>
