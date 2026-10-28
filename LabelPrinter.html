@@ -106,8 +106,33 @@
       gap: 2px;
     }
 
-    /* 日付操作ボタンのグループ（2段対応） */
+    /* 日付操作ボタンの全体コンテナ（横並び） */
     .date-shortcut-container {
+      display: inline-flex;
+      gap: 3px;
+      align-items: stretch;
+    }
+    /* 「本日」ボタンを縦長にするスタイル */
+    .btn-date-today-tall {
+      background: #e8f0fe;
+      color: #1a73e8;
+      border: 1px solid #c2e7ff;
+      font-size: 10px;
+      font-weight: bold;
+      padding: 0 6px;
+      border-radius: 3px;
+      cursor: pointer;
+      writing-mode: horizontal-tb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.1s;
+    }
+    .btn-date-today-tall:hover {
+      background: #d2e3fc;
+    }
+    /* ＋側・－側の縦積みグループ */
+    .date-shortcut-column {
       display: flex;
       flex-direction: column;
       gap: 2px;
@@ -125,6 +150,8 @@
       padding: 3px 5px;
       border-radius: 3px;
       cursor: pointer;
+      width: 44px; /* 幅を揃える */
+      text-align: center;
       transition: background 0.1s;
     }
     .btn-date-shift:hover {
@@ -132,44 +159,8 @@
       border-color: #1a73e8;
       color: #1a73e8;
     }
-    .btn-date-today {
-      background: #e8f0fe;
-      color: #1a73e8;
-      border-color: #c2e7ff;
-    }
-    .btn-date-today:hover {
-      background: #d2e3fc;
-    }
-    .btn-date-shift:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .btn-date-shift {
-      background: #f1f3f4;
-      border: 1px solid #dadce0;
-      color: #333;
-      font-size: 10px;
-      font-weight: bold;
-      padding: 3px 5px;
-      border-radius: 3px;
-      cursor: pointer;
-      transition: background 0.1s;
-    }
-    .btn-date-shift:hover {
-      background: #e8eaed;
-      border-color: #1a73e8;
-      color: #1a73e8;
-    }
-    .btn-date-today {
-      background: #e8f0fe;
-      color: #1a73e8;
-      border-color: #c2e7ff;
-    }
-    .btn-date-today:hover {
-      background: #d2e3fc;
-    }
-    .btn-date-shift:disabled {
+    .btn-date-shift:disabled,
+    .btn-date-today-tall:disabled {
       opacity: 0.5;
       cursor: not-allowed;
     }
@@ -1029,16 +1020,18 @@
           </span>
           <input type="date" class="input-expiry-date" id="exp_${item.id}" value="${item.expiryDate}" ${item.isBlank ? 'disabled' : ''} onchange="onExpiryChange('${item.id}', this.value)">
           <div class="date-shortcut-container">
-            <div class="date-shortcut-group">
-              <button type="button" class="btn-date-shift btn-date-today" ${item.isBlank ? 'disabled' : ''} onclick="resetToToday('${item.id}')" title="今日に戻す">本日</button>
-              <button type="button" class="btn-date-shift" ${item.isBlank ? 'disabled' : ''} onclick="shiftExpiryDate('${item.id}', 1, 0)" title="1年後">+1年</button>
-              <button type="button" class="btn-date-shift" ${item.isBlank ? 'disabled' : ''} onclick="shiftExpiryDate('${item.id}', 0, 6)" title="6か月後">+6か月</button>
-              <button type="button" class="btn-date-shift" ${item.isBlank ? 'disabled' : ''} onclick="shiftExpiryDate('${item.id}', 0, 3)" title="3か月後">+3か月</button>
-            </div>
-            <div class="date-shortcut-group">
-              <button type="button" class="btn-date-shift" ${item.isBlank ? 'disabled' : ''} onclick="shiftExpiryDate('${item.id}', -1, 0)" title="1年前">-1年</button>
-              <button type="button" class="btn-date-shift" ${item.isBlank ? 'disabled' : ''} onclick="shiftExpiryDate('${item.id}', 0, -6)" title="6か月前">-6か月</button>
-              <button type="button" class="btn-date-shift" ${item.isBlank ? 'disabled' : ''} onclick="shiftExpiryDate('${item.id}', 0, -3)" title="3か月前">-3か月</button>
+            <button type="button" class="btn-date-today-tall" ${item.isBlank ? 'disabled' : ''} onclick="resetToToday('${item.id}')" title="今日に戻す">本<br>日</button>
+            <div class="date-shortcut-column">
+              <div class="date-shortcut-group">
+                <button type="button" class="btn-date-shift" ${item.isBlank ? 'disabled' : ''} onclick="shiftExpiryDate('${item.id}', 1, 0)" title="1年後">+1年</button>
+                <button type="button" class="btn-date-shift" ${item.isBlank ? 'disabled' : ''} onclick="shiftExpiryDate('${item.id}', 0, 6)" title="6か月後">+6か月</button>
+                <button type="button" class="btn-date-shift" ${item.isBlank ? 'disabled' : ''} onclick="shiftExpiryDate('${item.id}', 0, 3)" title="3か月後">+3か月</button>
+              </div>
+              <div class="date-shortcut-group">
+                <button type="button" class="btn-date-shift" ${item.isBlank ? 'disabled' : ''} onclick="shiftExpiryDate('${item.id}', -1, 0)" title="1年前">-1年</button>
+                <button type="button" class="btn-date-shift" ${item.isBlank ? 'disabled' : ''} onclick="shiftExpiryDate('${item.id}', 0, -6)" title="6か月前">-6か月</button>
+                <button type="button" class="btn-date-shift" ${item.isBlank ? 'disabled' : ''} onclick="shiftExpiryDate('${item.id}', 0, -3)" title="3か月前">-3か月</button>
+              </div>
             </div>
           </div>
           <label class="blank-toggle-label ${item.isBlank ? 'active' : ''}">
