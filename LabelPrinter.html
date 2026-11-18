@@ -726,6 +726,62 @@
     @media print {
       .screen-grid-guide { display: none !important; }
     }
+
+    /* 1か月以内アラート用の大きな警告モーダル */
+    .alert-modal-content {
+      background: #ffffff;
+      border: 4px solid #d93025;
+      border-radius: 12px;
+      width: 460px;
+      max-width: 92vw;
+      padding: 24px;
+      box-shadow: 0 12px 40px rgba(217, 48, 37, 0.45);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      text-align: center;
+    }
+    .alert-modal-title {
+      font-size: 20px;
+      font-weight: 900;
+      color: #d93025;
+    }
+    .alert-modal-msg {
+      font-size: 15px;
+      font-weight: bold;
+      color: #202124;
+      line-height: 1.6;
+      background: #fce8e6;
+      padding: 14px;
+      border-radius: 8px;
+    }
+    .alert-modal-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+    .btn-alert-cancel {
+      flex: 1;
+      padding: 12px;
+      font-size: 14px;
+      font-weight: bold;
+      background: #5f6368;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .btn-alert-ok {
+      flex: 1;
+      padding: 12px;
+      font-size: 14px;
+      font-weight: bold;
+      background: #d93025;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -930,18 +986,15 @@
         .getAllProductMaster();
     };
 
-    // 新規行作成時の日付（今日）
+    // ① 新規行作成時の日付を空欄にする
     function addNewItemRow() {
       const rowId = 'row_' + Date.now() + '_' + Math.floor(Math.random()*1000);
-      
-      const defaultDate = new Date();
-      const dateStr = defaultDate.toISOString().split('T')[0];
 
       const item = {
         id: rowId,
         recordNo: '',
         productName: '',
-        expiryDate: dateStr,
+        expiryDate: '',
         isBlank: true,
         qty: 0
       };
@@ -949,6 +1002,50 @@
       itemRows.push(item);
       renderItemRowsUI();
       updatePreview();
+    }
+
+    // ② 1か月以内アラート用の制御変数と関数
+    let pendingDateAction = null;
+
+    function isWithinOneMonth(dateStr) {
+      if (!dateStr) return false;
+      const parts = dateStr.split('-');
+      if (parts.length !== 3) return false;
+
+      const inputDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // 操作日の1か月後を算出
+      const oneMonthLater = new Date(today);
+      oneMonthLater.setMonth(oneMonthLater.getMonth() + 1);
+
+      return inputDate <= oneMonthLater;
+    }
+
+    function openShortDateAlert(dateStr, onConfirm, onCancel) {
+      const parts = dateStr.split('-');
+      const inputDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const diffDays = Math.ceil((inputDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+      let diffLabel = diffDays === 0 ? '本日' : (diffDays > 0 ? `${diffDays}日後` : `${Math.abs(diffDays)}日前`);
+      document.getElementById('shortDateAlertMsg').innerHTML =
+        `選択された日付：<span style="font-size:19px; color:#d93025;">${dateStr}</span>（${diffLabel}）<br><br>` +
+        `操作日から1か月以内の日付になっています。<br>この日付で間違いありませんか？`;
+
+      pendingDateAction = { onConfirm, onCancel };
+      document.getElementById('shortDateAlertModal').style.display = 'flex';
+    }
+
+    function resolveShortDateAlert(isOk) {
+      document.getElementById('shortDateAlertModal').style.display = 'none';
+      if (!pendingDateAction) return;
+      const action = pendingDateAction;
+      pendingDateAction = null;
+      if (isOk && action.onConfirm) action.onConfirm();
+      if (!isOk && action.onCancel) action.onCancel();
     }
 
     // 行削除機能
@@ -979,36 +1076,53 @@
       const item = itemRows.find(r => r.id === rowId);
       if (!item) return;
 
-      const todayStr = new Date().toISOString().split('T')[0];
-      item.expiryDate = todayStr;
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-      const dateInput = document.getElementById(`exp_${rowId}`);
-      if (dateInput) {
-        dateInput.value = todayStr;
+      const apply = () => {
+        item.expiryDate = todayStr;
+        const dateInput = document.getElementById(`exp_${rowId}`);
+        if (dateInput) dateInput.value = todayStr;
+        updatePreview();
+      };
+
+      if (isWithinOneMonth(todayStr)) {
+        openShortDateAlert(todayStr, apply, null);
+      } else {
+        apply();
       }
-      updatePreview();
     }
 
-    // 日付に年・月を加算する関数
+    // 日付に年・月を加算する関数（空欄時は今日を基準に加算）
     function shiftExpiryDate(rowId, years, months) {
       const item = itemRows.find(r => r.id === rowId);
       if (!item) return;
 
-      let baseDate = item.expiryDate ? new Date(item.expiryDate) : new Date();
-      if (isNaN(baseDate.getTime())) {
+      let baseDate;
+      if (item.expiryDate) {
+        const p = item.expiryDate.split('-');
+        baseDate = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+      } else {
         baseDate = new Date();
       }
 
       baseDate.setFullYear(baseDate.getFullYear() + years);
       baseDate.setMonth(baseDate.getMonth() + months);
 
-      item.expiryDate = baseDate.toISOString().split('T')[0];
-      
-      const dateInput = document.getElementById(`exp_${rowId}`);
-      if (dateInput) {
-        dateInput.value = item.expiryDate;
+      const newDateStr = `${baseDate.getFullYear()}-${String(baseDate.getMonth() + 1).padStart(2, '0')}-${String(baseDate.getDate()).padStart(2, '0')}`;
+
+      const apply = () => {
+        item.expiryDate = newDateStr;
+        const dateInput = document.getElementById(`exp_${rowId}`);
+        if (dateInput) dateInput.value = newDateStr;
+        updatePreview();
+      };
+
+      if (isWithinOneMonth(newDateStr)) {
+        openShortDateAlert(newDateStr, apply, null);
+      } else {
+        apply();
       }
-      updatePreview();
     }
 
     function renderItemRowsUI() {
@@ -1035,7 +1149,7 @@
           <span id="prodName_${item.id}" style="font-size: 12px; font-weight: bold; color: #1a73e8; background: #fff; padding: 4px 8px; border-radius: 4px; border: 1px solid #dadce0; min-width: 220px; display: inline-block;">
             ${item.productName || '-- 商品名未設定 --'}
           </span>
-          <input type="date" class="input-expiry-date" id="exp_${item.id}" value="${item.expiryDate}" ${item.isBlank ? 'disabled' : ''} onchange="onExpiryChange('${item.id}', this.value)">
+          <input type="date" class="input-expiry-date" id="exp_${item.id}" value="${item.expiryDate}" ${item.isBlank ? 'disabled' : ''} onchange="onExpiryChange('${item.id}', this.value, this)">
           <div class="date-shortcut-container">
             <button type="button" class="btn-date-today-tall" ${item.isBlank ? 'disabled' : ''} onclick="resetToToday('${item.id}')" title="今日に戻す">本<br>日</button>
             <div class="date-shortcut-column">
@@ -1118,18 +1232,42 @@
       }
     }
 
-    function onExpiryChange(rowId, val) {
+    function // ② カレンダーで日付が選択されたときの処理
+    function onExpiryChange(rowId, val, inputEl) {
       const item = itemRows.find(r => r.id === rowId);
-      if (item) {
+      if (!item) return;
+
+      if (!val) {
+        item.expiryDate = '';
+        updatePreview();
+        return;
+      }
+
+      if (isWithinOneMonth(val)) {
+        openShortDateAlert(
+          val,
+          () => {
+            item.expiryDate = val;
+            updatePreview();
+          },
+          () => {
+            if (inputEl) inputEl.value = item.expiryDate;
+          }
+        );
+      } else {
         item.expiryDate = val;
         updatePreview();
       }
     }
 
+    // ① 空欄チェックを外したら日付を空欄にする
     function onBlankToggle(rowId, checked) {
       const item = itemRows.find(r => r.id === rowId);
       if (item) {
         item.isBlank = checked;
+        if (!checked) {
+          item.expiryDate = '';
+        }
         renderItemRowsUI();
         updatePreview();
       }
@@ -1684,6 +1822,18 @@ let pendingApproveData = null;
     </div>
   </div>
 </div>
+
+<!-- 賞味期限（1か月以内）の大きな警告モーダル -->
+  <div class="modal-overlay" id="shortDateAlertModal" style="z-index: 3000;">
+    <div class="alert-modal-content" onclick="event.stopPropagation()">
+      <div class="alert-modal-title">⚠️ 賞味期限が1か月以内です！</div>
+      <div class="alert-modal-msg" id="shortDateAlertMsg"></div>
+      <div class="alert-modal-actions">
+        <button type="button" class="btn-alert-cancel" onclick="resolveShortDateAlert(false)">キャンセル（元に戻す）</button>
+        <button type="button" class="btn-alert-ok" onclick="resolveShortDateAlert(true)">OK（このまま設定）</button>
+      </div>
+    </div>
+  </div>
 
 </body>
 </html>
