@@ -989,53 +989,36 @@
       updatePreview();
     }
 
-// 💡 短い日付が設定されていないかチェックしてアラートを出す関数
-    function checkShortDateAlert(dateStr, rowId) {
-      const item = itemRows.find(r => r.id === rowId);
-      if (!item || item.isBlank) return true; // 空欄モードなら無視
-
-      const inputDate = new Date(dateStr);
-      const today = new Date();
-      
-      // 時間部分をリセットして純粋な日数差を計算
-      inputDate.setHours(0, 0, 0, 0);
-      today.setHours(0, 0, 0, 0);
-
-      const diffTime = inputDate.getTime() - today.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-      // 💡 30日（1か月）以内の場合は警告アラートを出す
-      if (diffDays <= 30) {
-        const confirmMsg = `⚠️【賞味期限の確認】⚠️\n\n設定された日付（${dateStr}）は、本日から1か月以内（${diffDays}日後）です。\n\n※この日付で間違いない場合のみ「OK」を押してください。\n（間違えていた場合は「キャンセル」で元に戻せます）`;
-        return confirm(confirmMsg);
-      }
-      return true;
-    }
-
     // 💡 短い日付が設定されていないかチェックしてアラートを出す関数
     function checkShortDateAlert(dateStr, rowId) {
       const item = itemRows.find(r => r.id === rowId);
       if (!item || item.isBlank) return true; // 空欄モードなら無視
 
-      const inputDate = new Date(dateStr);
+      // 日付文字列をパース
+      const parts = dateStr.split('-');
+      if (parts.length !== 3) return true;
+      const inputDate = new Date(parts[0], parts[1] - 1, parts[2], 0, 0, 0, 0);
+
       const today = new Date();
-      
-      // 時間部分をリセットして純粋な日数差を計算
-      inputDate.setHours(0, 0, 0, 0);
       today.setHours(0, 0, 0, 0);
 
+      // 日数差を計算（ミリ秒 -> 日）
       const diffTime = inputDate.getTime() - today.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
       // 💡 30日（1か月）以内の場合は警告アラートを出す
+      // （※ マイナスの日数（過去）の場合もアラート対象とします）
       if (diffDays <= 30) {
-        const confirmMsg = `⚠️【賞味期限の確認】⚠️\n\n設定された日付（${dateStr}）は、本日から1か月以内（${diffDays}日後）です。\n\n※この日付で間違いない場合のみ「OK」を押してください。\n（間違えていた場合は「キャンセル」で元に戻せます）`;
+        let msgDays = diffDays >= 0 ? `${diffDays}日後` : `${Math.abs(diffDays)}日前`;
+        if (diffDays === 0) msgDays = "本日";
+
+        const confirmMsg = `⚠️【賞味期限の確認】⚠️\n\n設定された日付（${dateStr}）は、操作日から1か月以内（${msgDays}）です。\n\n※この日付で間違いない場合のみ「OK」を押してください。\n（間違えていた場合は「キャンセル」で元に戻せます）`;
         return confirm(confirmMsg);
       }
       return true;
     }
 
-// 日付に年・月を加算する関数
+    // 日付に年・月を加算する関数
     function shiftExpiryDate(rowId, years, months) {
       const item = itemRows.find(r => r.id === rowId);
       if (!item) return;
@@ -1066,6 +1049,20 @@
       updatePreview();
     }
 
+    // カレンダー入力を直接変更した際にもアラートをチェックする
+    function onExpiryChange(rowId, val, inputEl) {
+      const item = itemRows.find(r => r.id === rowId);
+      if (item) {
+        if (!checkShortDateAlert(val, rowId)) {
+          // キャンセルされた場合は元の入力値に戻す
+          if (inputEl) inputEl.value = item.expiryDate;
+          return;
+        }
+        item.expiryDate = val;
+        updatePreview();
+      }
+    }
+
     function renderItemRowsUI() {
       const container = document.getElementById('itemsContainer');
       container.innerHTML = '';
@@ -1090,7 +1087,7 @@
           <span id="prodName_${item.id}" style="font-size: 12px; font-weight: bold; color: #1a73e8; background: #fff; padding: 4px 8px; border-radius: 4px; border: 1px solid #dadce0; min-width: 220px; display: inline-block;">
             ${item.productName || '-- 商品名未設定 --'}
           </span>
-          <input type="date" class="input-expiry-date" id="exp_${item.id}" value="${item.expiryDate}" ${item.isBlank ? 'disabled' : ''} onchange="onExpiryChange('${item.id}', this.value, this)">          
+          <input type="date" class="input-expiry-date" id="exp_${item.id}" value="${item.expiryDate}" ${item.isBlank ? 'disabled' : ''} onchange="onExpiryChange('${item.id}', this.value, this)">
           <div class="date-shortcut-container">
             <button type="button" class="btn-date-today-tall" ${item.isBlank ? 'disabled' : ''} onclick="resetToToday('${item.id}')" title="今日に戻す">本<br>日</button>
             <div class="date-shortcut-column">
@@ -1169,20 +1166,6 @@
       }
 
       if (typeof updatePreview === 'function') {
-        updatePreview();
-      }
-    }
-
-    // 💡 カレンダー入力を直接変更した際にもアラートをチェックする
-    function onExpiryChange(rowId, val, inputEl) {
-      const item = itemRows.find(r => r.id === rowId);
-      if (item) {
-        if (!checkShortDateAlert(val, rowId)) {
-          // キャンセルされた場合は元の入力値に戻す
-          if (inputEl) inputEl.value = item.expiryDate;
-          return;
-        }
-        item.expiryDate = val;
         updatePreview();
       }
     }
