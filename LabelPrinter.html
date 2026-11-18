@@ -100,12 +100,6 @@
       cursor: not-allowed;
     }
 
-    /* 日付操作ボタンのグループ */
-    .date-shortcut-group {
-      display: inline-flex;
-      gap: 2px;
-    }
-
     /* 日付操作ボタンの全体コンテナ（横並び） */
     .date-shortcut-container {
       display: inline-flex;
@@ -957,6 +951,29 @@
       updatePreview();
     }
 
+    // 行削除機能
+    function removeItemRow(rowId) {
+      itemRows = itemRows.filter(r => r.id !== rowId);
+      renderItemRowsUI();
+      updatePreview();
+    }
+
+    // 残りの空白面に適用する関数
+    function fillItemToFull(rowId) {
+      const item = itemRows.find(r => r.id === rowId);
+      if (!item) return;
+
+      let otherRowsTotal = 0;
+      itemRows.forEach(r => {
+        if (r.id !== rowId) otherRowsTotal += (r.qty || 0);
+      });
+
+      const remain = Math.max(1, 95 - startSlotIndex - otherRowsTotal);
+      item.qty = remain;
+      renderItemRowsUI();
+      updatePreview();
+    }
+
     // 本日（今日）に戻す関数
     function resetToToday(rowId) {
       const item = itemRows.find(r => r.id === rowId);
@@ -979,17 +996,17 @@
 
       const inputDate = new Date(dateStr);
       const today = new Date();
+      
       // 時間部分をリセットして純粋な日数差を計算
       inputDate.setHours(0, 0, 0, 0);
       today.setHours(0, 0, 0, 0);
 
-      // 日数差を計算（ミリ秒 -> 日）
       const diffTime = inputDate.getTime() - today.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-      // 180日（約半年）未満の場合は警告アラートを出す
-      if (diffDays < 180) {
-        const confirmMsg = `⚠️【賞味期限の確認】⚠️\n\n設定された日付（${dateStr}）は、本日から約半年未満（${diffDays}日後）です。\n\n※この日付で間違いない場合のみ「OK」を押してください。\n（間違えていた場合は「キャンセル」で元に戻せます）`;
+      // 💡 30日（1か月）以内の場合は警告アラートを出す
+      if (diffDays <= 30) {
+        const confirmMsg = `⚠️【賞味期限の確認】⚠️\n\n設定された日付（${dateStr}）は、本日から1か月以内（${diffDays}日後）です。\n\n※この日付で間違いない場合のみ「OK」を押してください。\n（間違えていた場合は「キャンセル」で元に戻せます）`;
         return confirm(confirmMsg);
       }
       return true;
@@ -1005,7 +1022,6 @@
         baseDate = new Date();
       }
 
-      // 日付を加算・減算
       baseDate.setFullYear(baseDate.getFullYear() + years);
       baseDate.setMonth(baseDate.getMonth() + months);
 
@@ -1051,6 +1067,7 @@
             ${item.productName || '-- 商品名未設定 --'}
           </span>
           <input type="date" class="input-expiry-date" id="exp_${item.id}" value="${item.expiryDate}" ${item.isBlank ? 'disabled' : ''} onchange="onExpiryChange('${item.id}', this.value, this)">
+          
           <div class="date-shortcut-container">
             <button type="button" class="btn-date-today-tall" ${item.isBlank ? 'disabled' : ''} onclick="resetToToday('${item.id}')" title="今日に戻す">本<br>日</button>
             <div class="date-shortcut-column">
@@ -1137,7 +1154,6 @@
     function onExpiryChange(rowId, val, inputEl) {
       const item = itemRows.find(r => r.id === rowId);
       if (item) {
-        // アラートチェック
         if (!checkShortDateAlert(val, rowId)) {
           // キャンセルされた場合は元の入力値に戻す
           if (inputEl) inputEl.value = item.expiryDate;
